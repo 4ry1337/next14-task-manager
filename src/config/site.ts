@@ -1,4 +1,4 @@
 export const siteConfig = {
-  title: 'Task Manager',
-  description: 'Task Manager',
+  title: 'To Do App',
+  description: 'To Do App',
 };
