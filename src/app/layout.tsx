@@ -1,6 +1,4 @@
 import { siteConfig } from '@/config/site';
-import AuthContext from '@/context/AuthContext';
-import ToasterContext from '@/context/ToasterContext';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -22,12 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en'>
-      <body className={inter.className}>
-        <AuthContext>
-          <ToasterContext />
-          {children}
-        </AuthContext>
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
