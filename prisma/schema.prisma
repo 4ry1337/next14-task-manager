@@ -48,6 +48,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
+  projects      Member[]
 }
 
 model VerificationToken {
@@ -58,6 +59,135 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Workspace {
+  id            String    @id @default(uuid())
+  logo          String?
+  title         String
+  description   String?
+  auditLog      AuditLog?
+  projects      Project[]
+  members       Member[]
+  inviteEnabled Boolean   @default(false)
+  inviteLink    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Roles {
+  owner
+  admin
+  user
+}
+
+model Member {
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  role        Roles     @default(user)
+  assignedAt  DateTime  @default(now())
+  assignedBy  String
+
+  @@id([userId, workspaceId])
+}
+
+model Project {
+  id          String      @id @default(uuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  title       String
+  parameters  Parameter[]
+  task        Task[]
+  archive Boolean @default(false)
+  createdBy   String
+  updatedBy   String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Parameter {
+  id    String @id @default(uuid())
+  title String
+  index Float //position in list
+
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  options   Option[]
+  createdBy String
+  updatedBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Option {
+  id          String         @id @default(uuid())
+  parameterId String
+  parameter   Parameter      @relation(fields: [parameterId], references: [id])
+  label       String
+  createdBy   String
+  updatedBy   String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tasks       OptionOnTask[]
+}
+
+model OptionOnTask {
+  optionId String
+  option   Option @relation(fields: [optionId], references: [id])
+  taskId   String
+  task     Task   @relation(fields: [taskId], references: [id])
+
+  @@id([optionId, taskId])
+}
+
+model Task {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+  parentId  String?
+  parent    Task?   @relation("parent", fields: [parentId], references: [id])
+  children  Task[]  @relation("parent")
+
+  index Float? //position in list
+
+  options OptionOnTask[]
+
+  complete     Boolean   @default(false)
+  due          DateTime?
+  title        String
+  description  String?   @db.Text
+  commentCount Int       @default(0)
+
+  createdBy  String?
+  updatedBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  assignedTo String?
+  assignedBy String?
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  workspaceId String      @unique
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+
+  action      ACTION
+
+  entityId    String
+  entityType  ENTITY_TYPE
+  entityTitle String
+
+  userId      String
+  userImage   String?      @db.Text
+  userName    String?      @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum ACTION {
   CREATE
   UPDATE
@@ -65,76 +195,8 @@ enum ACTION {
 }
 
 enum ENTITY_TYPE {
-  BOARD
-  FIELD
-  CARD
-}
-
-model AuditLog {
-  id          String      @id @default(uuid())
-  orgId       String
-  action      ACTION
-  entityId    String
-  entityType  ENTITY_TYPE
-  entityTitle String
-  userId      String
-  userImage   String      @db.Text
-  userName    String      @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Board {
-  id            String @id @default(uuid())
-  orgId         String
-  title         String
-  imageId       String
-  imageThumbUrl String @db.Text
-  imageFullUrl  String @db.Text
-  imageUserName String @db.Text
-  imageLinkHTML String @db.Text
-
-  lists List[]
-
-  createdBy String?
-  updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model List {
-  id    String @id @default(uuid())
-  title String
-  index Float //position in list
-
-  boardId String
-  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-
-  cards     Card[]
-  createdBy String?
-  updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([boardId])
-}
-
-model Card {
-  id       String  @id @default(uuid())
-  index    Float //position in list
-  parentId String?
-  parent   Card?   @relation("parent", fields: [parentId], references: [id])
-  content  Card[]  @relation("parent")
-
-  listId String
-  list   List   @relation(fields: [listId], references: [id])
-
-  title       String
-  description String? @db.Text
-
-  createdBy String?
-  updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  WORKSPACE
+  PROJECT
+  SECTION
+  TASK
 }
